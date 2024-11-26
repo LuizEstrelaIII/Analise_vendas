@@ -13,7 +13,10 @@ Painéis Interativos: Visualizações dinâmicas em Power BI para apresentação
 
 # Ferramentas Utilizadas:
 Python: Limpeza de dados, análise exploratória e modelagem preditiva.
+
 SQL: Armazenamento e manipulação de dados.
+
 Power BI: Criação de dashboards para visualização de insights.
+
 Machine Learning: Modelos para previsão de demanda e otimização de estoque.
 

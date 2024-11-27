@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import mysql.connector
 from mysql.connector import Error
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Função para inserir dados no MySQL
 def insert_data_to_mysql(produto, quantidade, preco, data):
@@ -22,6 +24,28 @@ def insert_data_to_mysql(produto, quantidade, preco, data):
             st.success("Dados inseridos com sucesso no banco de dados!")
     except Error as e:
         st.error(f"Erro ao inserir os dados: {e}")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+# Função para consultar dados no MySQL
+def query_data_from_mysql(query):
+    try:
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='vendas_db',
+            user='root',     # Substitua pelo seu usuário
+            password='Luiz@160404'    # Substitua pela sua senha
+        )
+        if connection.is_connected():
+            cursor = connection.cursor()
+            cursor.execute(query)
+            results = cursor.fetchall()
+            return results
+    except Error as e:
+        st.error(f"Erro ao consultar o banco de dados: {e}")
+        return []
     finally:
         if connection.is_connected():
             cursor.close()
@@ -92,3 +116,60 @@ elif input_method == "Upload de Arquivo CSV":
                 if connection.is_connected():
                     cursor.close()
                     connection.close()
+
+
+# Interface Streamlit para Relatórios
+st.title("Relatórios de Vendas")
+
+# Relatório 1: Vendas Totais por Produto
+st.subheader("Vendas Totais por Produto")
+query = "SELECT produto, SUM(quantidade) AS total_vendas FROM vendas GROUP BY produto"
+result = query_data_from_mysql(query)
+
+if result:
+    df_vendas_produto = pd.DataFrame(result, columns=['Produto', 'Total de Vendas'])
+    st.write(df_vendas_produto)
+    
+    # Gerando gráfico
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x='Produto', y='Total de Vendas', data=df_vendas_produto)
+    plt.title('Vendas Totais por Produto')
+    plt.xticks(rotation=45)
+    st.pyplot(plt)
+else:
+    st.write("Nenhuma venda registrada.")
+
+# Relatório 2: Vendas em Intervalo de Data
+st.subheader("Vendas por Intervalo de Data")
+start_date = st.date_input("Data Inicial")
+end_date = st.date_input("Data Final")
+
+if st.button("Gerar Relatório de Vendas por Data"):
+    query = f"""
+    SELECT produto, quantidade, preco, data
+    FROM vendas
+    WHERE data BETWEEN '{start_date}' AND '{end_date}'
+    """
+    result = query_data_from_mysql(query)
+    if result:
+        df_vendas_data = pd.DataFrame(result, columns=['Produto', 'Quantidade', 'Preço', 'Data'])
+        st.write(df_vendas_data)
+        
+        # Gerando gráfico
+        plt.figure(figsize=(10, 6))
+        sns.lineplot(x='Data', y='Quantidade', data=df_vendas_data, marker='o')
+        plt.title('Vendas ao Longo do Tempo')
+        st.pyplot(plt)
+    else:
+        st.write("Nenhuma venda encontrada para este intervalo de datas.")
+
+# Relatório 3: Total de Vendas
+st.subheader("Total de Vendas Realizadas")
+query = "SELECT SUM(quantidade * preco) AS total_vendas FROM vendas"
+result = query_data_from_mysql(query)
+
+if result:
+    total_vendas = result[0][0]
+    st.write(f"Total de Vendas Realizadas: R$ {total_vendas:.2f}")
+else:
+    st.write("Erro ao calcular o total de vendas.")
